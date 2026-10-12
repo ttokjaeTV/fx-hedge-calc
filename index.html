@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>환헤지 비교 계산기 · 똑재TV</title>
+<meta name="description" content="미국 자산 ETF를 환헤지(H)로 살지 환노출로 살지, 기간 끝 환율이 얼마 아래로 내려가야 (H)가 유리한지 손익분기 환율 하나로 보여 드립니다.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<style>
+  :root {
+    --bg: #F5EFE6;
+    --bg-alt: #EFE7DA;
+    --ink: #1A1A1A;
+    --ink-soft: #4A4A4A;
+    --ink-mute: #8B8276;
+    --accent: #D9542B;
+    --accent-soft: #F4D5C4;
+    --border: #E5DCC8;
+    --white: #FBF7F0;
+    --brown: #8B6F47;
+    --beige-gold: #C4A57B;
+    --dark-warm: #3A2F26;
+    --dark-warm-soft: #5A4A3D;
+    --green: #4A5A4A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 32px 24px;
+    font-weight: 600;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* 헤더 */
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 40px; height: 40px; background: var(--dark-warm); color: var(--white);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 20px;
+  }
+  .logo-name { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--ink-mute); font-weight: 700; letter-spacing: 1px; }
+
+  /* 히어로 */
+  .hero { margin-bottom: 32px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--white); border: 1.5px solid var(--accent); color: var(--accent);
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    margin-bottom: 20px;
+  }
+  .tag .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .hero-title { font-size: 64px; font-weight: 900; letter-spacing: -2.5px; line-height: 1.05; margin-bottom: 20px; }
+  .underline-mark { background: linear-gradient(transparent 60%, var(--accent-soft) 60%); padding: 0 4px; }
+  .hero-desc { font-size: 17px; color: var(--ink-soft); font-weight: 500; line-height: 1.7; }
+
+  /* 상단 CTA */
+  .top-cta {
+    background: var(--bg-alt); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px 24px; margin-bottom: 32px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .top-cta-text { font-size: 14px; color: var(--ink-soft); font-weight: 600; }
+  .top-cta-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .top-cta-link {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; text-decoration: none;
+    background: var(--white); border: 1.5px solid var(--border); color: var(--ink);
+  }
+  .top-cta-link.primary { background: var(--accent); color: var(--white); border-color: var(--accent); }
+  .naver-mark {
+    display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px;
+    background: #03C75A; color: #FFFFFF; font-weight: 900; font-size: 11px; border-radius: 3px;
+    line-height: 1; letter-spacing: -0.5px; flex-shrink: 0;
+  }
+
+  /* 카드 / 스텝 */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 28px; margin-bottom: 32px; }
+  .step-label { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .step-line { width: 28px; height: 2px; background: var(--accent); }
+  .step-text { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--accent); }
+  .card-title { font-size: 24px; font-weight: 900; letter-spacing: -0.6px; margin-bottom: 6px; }
+  .card-subtitle { font-size: 14px; color: var(--ink-mute); font-weight: 500; margin-bottom: 22px; line-height: 1.6; }
+
+  /* 입력 */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .input-group { margin-bottom: 18px; }
+  .input-group:last-child { margin-bottom: 0; }
+  .label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--ink-soft); margin-bottom: 8px; }
+  input[type=number], select {
+    background: var(--white); border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-family: inherit; font-size: 16px; color: var(--ink); font-weight: 700;
+    transition: all 0.15s ease; width: 100%;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .input-hint { font-size: 12px; color: var(--ink-mute); font-weight: 600; margin-top: 6px; line-height: 1.6; word-break: keep-all; }
+  .input-wrap { position: relative; }
+  .input-wrap input { padding-right: 130px; }
+  /* 숫자 바로 뒤에 붙는 단위 (만원·년·%·원) — 위치는 JS가 글자 폭을 재서 맞춘다 */
+  .input-unit { position: absolute; top: 50%; transform: translateY(-50%); left: 0; pointer-events: none;
+    font-size: 15px; font-weight: 700; color: var(--ink-mute); white-space: nowrap; visibility: hidden; }
+  .input-currency {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 800;
+    padding: 5px 10px; border-radius: 6px; pointer-events: none; letter-spacing: -0.3px;
+    white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .input-currency.empty { background: transparent; color: var(--ink-mute); font-weight: 600; }
+  .sub-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+  .sub-card-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.3px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    background: var(--white); border: 1.5px solid var(--border); color: var(--ink-soft);
+    border-radius: 999px; padding: 5px 12px; font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--white); }
+
+  /* 결과 */
+  .verdict {
+    background: var(--dark-warm); color: var(--white); border-radius: 20px; padding: 30px 32px; margin-bottom: 20px;
+  }
+  .verdict-label { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--accent-soft); margin-bottom: 10px; }
+  .verdict-main { font-size: 30px; font-weight: 900; letter-spacing: -0.8px; line-height: 1.3; word-break: keep-all; }
+  .verdict-main .hl { color: #FFB38F; }
+  .verdict-sub { font-size: 15px; color: #D9D2C5; font-weight: 500; margin-top: 12px; line-height: 1.7; }
+  .verdict-sub strong { color: var(--white); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+  .stat-card.accent { background: var(--accent); border-color: var(--accent); color: var(--white); }
+  .stat-card.accent .stat-label, .stat-card.accent .stat-sub { color: #FDE3D6; }
+  .stat-card.accent-green { background: var(--green); border-color: var(--green); color: var(--white); }
+  .stat-card.accent-green .stat-label, .stat-card.accent-green .stat-sub { color: #B8C4B8; }
+  .stat-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--ink-mute); margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 900; letter-spacing: -1px; line-height: 1.15; }
+  .stat-sub { font-size: 13px; color: var(--ink-mute); margin-top: 6px; font-weight: 500; line-height: 1.5; }
+
+  .chart-title { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 4px; }
+  .chart-subtitle { font-size: 13px; color: var(--ink-mute); font-weight: 500; margin-bottom: 18px; line-height: 1.6; }
+  .chart-container { position: relative; height: 360px; width: 100%; }
+  .chart-container.sm { height: 300px; }
+
+  /* 시나리오 표 */
+  .table-wrap { overflow-x: auto; margin-top: 16px; border-radius: 12px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
+  .data-table th {
+    background: var(--bg-alt); padding: 12px 10px; text-align: right; font-weight: 700; color: var(--ink-soft);
+    font-size: 11.5px; border-bottom: 1.5px solid var(--border); white-space: nowrap;
+  }
+  .data-table th:first-child { text-align: center; }
+  .data-table td {
+    padding: 11px 10px; text-align: right; border-bottom: 1px solid var(--border);
+    font-weight: 600; color: var(--ink); white-space: nowrap;
+  }
+  .data-table td:first-child { text-align: center; font-weight: 800; color: var(--accent); }
+  .data-table tbody tr:hover { background: var(--bg-alt); }
+  .data-table .highlight-row { background: var(--accent-soft); }
+  .data-table .highlight-row td { font-weight: 800; }
+  .data-table td.c-accent { color: var(--accent); font-weight: 800; }
+  .data-table td.c-brown { color: var(--brown); }
+  .data-table td.c-green { color: var(--green); }
+  .data-table td.c-dark { color: var(--dark-warm); font-weight: 800; }
+  .data-table .be-row { background: #E4E8E2; }
+  .tag-mini.base { background: var(--brown); }
+  .tag-mini.be { background: var(--green); }
+  .tag-mini {
+    display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent); color: var(--white); margin-left: 6px; vertical-align: 1px;
+  }
+
+  /* 인사이트 */
+  .insight-box { background: var(--dark-warm); color: var(--white); border-radius: 20px; padding: 36px; margin-bottom: 24px; }
+  .insight-label { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .insight-label-text { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--accent-soft); }
+  .insight-title { font-size: 24px; font-weight: 900; margin-bottom: 16px; letter-spacing: -0.5px; line-height: 1.35; }
+  .insight-desc { font-size: 15px; line-height: 1.75; color: #D9D2C5; font-weight: 500; }
+  .insight-desc strong { color: var(--white); }
+  .insight-cta {
+    margin-top: 28px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.12);
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  }
+  .insight-cta-text { font-size: 14px; color: #D9D2C5; font-weight: 600; margin-right: 8px; }
+  .cta-link {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s ease; letter-spacing: -0.2px;
+  }
+  .cta-link.primary { background: var(--accent); color: var(--white); }
+  .cta-link.primary:hover { background: #E66740; transform: translateY(-1px); }
+  .cta-link.secondary { background: rgba(255,255,255,0.08); color: var(--white); border: 1px solid rgba(255,255,255,0.15); }
+  .cta-link.secondary:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+
+  .link-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .btn {
+    background: var(--dark-warm); color: var(--white); border: none; padding: 11px 18px; border-radius: 12px;
+    font-family: inherit; font-weight: 700; cursor: pointer; transition: all 0.15s ease; font-size: 14px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  }
+  .btn:hover { background: var(--accent); }
+
+  .hub-back { display: inline-block; font-size: 13px; color: var(--ink-mute); font-weight: 600; text-decoration: none; margin-bottom: 12px; }
+  .hub-back:hover { color: var(--accent); }
+  footer { text-align: center; font-size: 12.5px; color: var(--ink-mute); font-weight: 500; line-height: 1.8; padding: 24px 0 8px; word-break: keep-all; }
+
+  /* 계산 공식 (이 계산기 전용) */
+  .formula-list { list-style: none; display: grid; gap: 10px; }
+  .formula-list li { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; }
+  .formula-list .f-name { display: block; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; color: var(--accent); margin-bottom: 4px; }
+  .formula-list .f-eq { display: block; font-weight: 800; color: var(--dark-warm); }
+  .formula-list .f-val { display: block; font-size: 13px; color: var(--ink-mute); font-weight: 600; margin-top: 4px; }
+
+  @media (max-width: 1100px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 768px) {
+    body { padding: 16px 12px; }
+    header { margin-bottom: 24px; }
+    .card { padding: 18px 16px !important; margin-bottom: 20px !important; border-radius: 16px !important; }
+    .hero-title { font-size: 34px !important; letter-spacing: -1.2px !important; line-height: 1.18 !important; }
+    .hero-desc { font-size: 15px; }
+    .hero-desc br { display: none; }
+    .top-cta { flex-direction: column; align-items: stretch; padding: 16px; }
+    .top-cta-links { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .top-cta-link { justify-content: center; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr !important; gap: 14px !important; }
+    .sub-card { padding: 16px; }
+    .input-wrap input { padding-right: 112px; }
+    .input-currency { max-width: 96px; font-size: 12px; }
+    .card-title { font-size: 20px; }
+    .verdict { padding: 22px 18px; border-radius: 16px; }
+    .verdict-main { font-size: 22px; letter-spacing: -0.5px; }
+    .verdict-main br { display: none; }
+    .verdict-sub { font-size: 14px; }
+    .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .stat-card { padding: 16px !important; border-radius: 14px !important; }
+    .stat-value { font-size: 21px !important; }
+    .stat-sub { font-size: 12px; }
+    .chart-title { font-size: 15px; line-height: 1.4; }
+    .chart-container { height: 280px !important; }
+    .chart-container.sm { height: 260px !important; }
+    .insight-box { padding: 24px 18px; border-radius: 16px; }
+    .insight-title { font-size: 19px !important; }
+    .insight-cta { flex-direction: column; align-items: stretch; }
+    .cta-link { justify-content: center; }
+    .table-wrap { margin: 16px -16px 0; padding: 0 16px; -webkit-overflow-scrolling: touch; }
+    .data-table { font-size: 11.5px; min-width: 640px; }
+    .data-table th { padding: 8px 6px; font-size: 10.5px; }
+    .data-table td { padding: 8px 6px; }
+    .formula-list li { padding: 12px 14px; font-size: 13.5px; }
+  }
+  @media (max-width: 380px) {
+    .hero-title { font-size: 29px !important; }
+    .stat-grid { grid-template-columns: 1fr; }
+    .top-cta-links { grid-template-columns: 1fr !important; }
+  }
+
+  /* 표 내려받기 (CSV·엑셀) */
+  .dl-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; }
+  .dl-btn { font-family: inherit; font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--accent, #D9542B); background: #FBF7F0; color: var(--accent, #D9542B); cursor: pointer; line-height: 1.2; }
+  .dl-btn:hover { background: var(--accent, #D9542B); color: #fff; }
+  .dl-note { font-size: 12px; color: #8B7B6B; font-weight: 600; word-break: keep-all; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <a href="https://ttokjaetv.github.io/" class="hub-back">← 똑재TV 계산기 모음</a>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">똑</div>
+      <div>
+        <div class="logo-name">똑재TV</div>
+        <div class="logo-sub">FX HEDGE CALCULATOR</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <span class="tag"><span class="dot"></span>환헤지 비교 계산기</span>
+    <h1 class="hero-title">
+      미국 ETF, (H)로 살까<br>
+      <span class="underline-mark">환노출</span>로 살까?
+    </h1>
+    <p class="hero-desc">
+      같은 미국 지수를 따라가도 환헤지(H)를 하느냐 마느냐에 따라 원화로 손에 쥐는 돈이 달라집니다.<br>
+      기간 끝 환율이 <strong>얼마 아래로 내려가야 (H)가 이기는지</strong>, 손익분기 환율 하나로 보여 드립니다.
+    </p>
+  </div>
+
+  <div class="top-cta">
+    <div class="top-cta-text">💡 연금계좌에서 미국 ETF 고를 때 <strong>(H)를 붙일지</strong> 고민되시죠? 똑재TV에서 매주 만나보세요.</div>
+    <div class="top-cta-links">
+      <a href="https://www.youtube.com/@ttok_jae" target="_blank" rel="noopener" class="top-cta-link primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        똑재TV 구독하기
+      </a>
+      <a href="https://cafe.naver.com/ttokjae" target="_blank" rel="noopener" class="top-cta-link">
+        <span class="naver-mark">N</span>
+        평생 ETF 투자 카페
+      </a>
+    </div>
+  </div>
+
+  <!-- STEP 01 : 투자 조건 -->
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 01 / 투자 조건</span></div>
+    <h2 class="card-title">얼마를, 몇 년, 어떤 수익률로?</h2>
+    <p class="card-subtitle">투자금은 <strong>만원 단위</strong>입니다. 수익률은 환율을 빼고 <strong>달러 기준</strong>으로 기초지수(예: S&amp;P500)가 1년에 얼마나 오를지 넣으세요.</p>
+
+    <div class="grid-3">
+      <div class="input-group">
+        <label class="label" for="amount">투자금</label>
+        <div class="input-wrap">
+          <input type="number" id="amount" data-unit="만원" value="1000" step="100" min="0">
+          <span class="input-currency" id="amount-display">1,000만원</span>
+        </div>
+        <div class="chips" data-target="amount">
+          <button class="chip" data-v="1000">1,000만</button>
+          <button class="chip" data-v="3000">3,000만</button>
+          <button class="chip" data-v="5000">5,000만</button>
+          <button class="chip" data-v="10000">1억</button>
+        </div>
+        <div class="input-hint">처음에 한 번에 넣는다고 가정합니다</div>
+      </div>
+      <div class="input-group">
+        <label class="label" for="years">투자 기간</label>
+        <div class="input-wrap">
+          <input type="number" id="years" data-unit="년" value="5" step="1" min="1" max="50">
+          <span class="input-currency" id="years-display">5년</span>
+        </div>
+        <div class="chips" data-target="years">
+          <button class="chip" data-v="1">1년</button>
+          <button class="chip" data-v="3">3년</button>
+          <button class="chip" data-v="5">5년</button>
+          <button class="chip" data-v="10">10년</button>
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="label" for="rate">기초지수 연 수익률 (달러 기준)</label>
+        <div class="input-wrap">
+          <input type="number" id="rate" data-unit="%" value="7" step="any" min="-50" max="50">
+          <span class="input-currency" id="rate-display">연 7.0%</span>
+        </div>
+        <div class="chips" data-target="rate">
+          <button class="chip" data-v="3">3%</button>
+          <button class="chip" data-v="5">5%</button>
+          <button class="chip" data-v="7">7%</button>
+          <button class="chip" data-v="10">10%</button>
+        </div>
+        <div class="input-hint">세전 · 마이너스도 넣을 수 있습니다 (예: −5)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 02 : 환율·헤지 비용 -->
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 02 / 환율과 헤지 비용</span></div>
+    <h2 class="card-title">환율은 어디로 갈까요?</h2>
+    <p class="card-subtitle">환노출은 환율이 오르면 이득, 떨어지면 손해입니다. (H)는 환율과 상관없이 가는 대신 해마다 헤지 비용을 냅니다.</p>
+
+    <div class="grid-2" style="align-items:stretch;">
+      <div class="sub-card">
+        <div class="sub-card-title">원/달러 환율</div>
+        <div class="input-group">
+          <label class="label" for="fxnow">현재 환율</label>
+          <div class="input-wrap">
+            <input type="number" id="fxnow" data-unit="원" value="1400" step="10" min="1">
+            <span class="input-currency" id="fxnow-display">1,400원</span>
+          </div>
+          <div class="input-hint">오늘 환율을 직접 넣으세요. 실시간 환율이 아니며, 기본값 1,400원은 예시입니다.</div>
+        </div>
+        <div class="input-group">
+          <label class="label" for="fxend">기간 끝 예상 환율</label>
+          <div class="input-wrap">
+            <input type="number" id="fxend" data-unit="원" value="1300" step="10" min="1">
+            <span class="input-currency" id="fxend-display">7.1% 하락</span>
+          </div>
+          <div class="chips" id="fxend-chips">
+            <button class="chip" data-p="-20">−20%</button>
+            <button class="chip" data-p="-10">−10%</button>
+            <button class="chip" data-p="0">그대로</button>
+            <button class="chip" data-p="10">+10%</button>
+          </div>
+          <div class="input-hint">버튼은 현재 환율 대비 변화율로 빠르게 넣는 기능입니다</div>
+        </div>
+      </div>
+
+      <div class="sub-card">
+        <div class="sub-card-title">(H) 헤지 비용</div>
+        <div class="input-group">
+          <label class="label" for="hedge">연 환헤지 비용</label>
+          <div class="input-wrap">
+            <input type="number" id="hedge" data-unit="%" value="0.8" step="0.05" min="-10" max="10">
+            <span class="input-currency" id="hedge-display">연 0.80%</span>
+          </div>
+          <div class="chips" data-target="hedge">
+            <button class="chip" data-v="-0.5">−0.5%</button>
+            <button class="chip" data-v="0">0%</button>
+            <button class="chip" data-v="0.8">0.8%</button>
+            <button class="chip" data-v="1.5">1.5%</button>
+          </div>
+          <div class="input-hint">헤지 비용은 대략 미국 금리 − 한국 금리만큼입니다. 2026년 4월 17일 기준 1년 만기 국채 금리는 한국 2.92%, 미국 3.67%로 차이는 약 0.75%p였습니다(이코노미스트, 2026-04-30). 금리차가 줄면 비용도 줄고, 한국 금리가 더 높아지면 오히려 헤지 프리미엄(마이너스 비용)이 생깁니다. 마이너스로 넣으면 프리미엄으로 계산합니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 03 : 결과 -->
+  <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 03 / 결과</span></div>
+  <div class="verdict" id="verdict">
+    <div class="verdict-label" id="verdict-label">RESULT · 손익분기 환율</div>
+    <div class="verdict-main" id="verdict-main">-</div>
+    <div class="verdict-sub" id="verdict-sub"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label" id="s1-label">-</div><div class="stat-value" id="s1-value">-</div><div class="stat-sub" id="s1-sub"></div></div>
+    <div class="stat-card"><div class="stat-label" id="s2-label">-</div><div class="stat-value" id="s2-value">-</div><div class="stat-sub" id="s2-sub"></div></div>
+    <div class="stat-card accent"><div class="stat-label" id="s3-label">-</div><div class="stat-value" id="s3-value">-</div><div class="stat-sub" id="s3-sub"></div></div>
+    <div class="stat-card accent-green"><div class="stat-label" id="s4-label">-</div><div class="stat-value" id="s4-value">-</div><div class="stat-sub" id="s4-sub"></div></div>
+  </div>
+
+  <div class="card">
+    <h3 class="chart-title">기간 끝 환율에 따라 달라지는 평가액</h3>
+    <p class="chart-subtitle" id="fx-subtitle">-</p>
+    <div class="chart-container"><canvas id="fx-chart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h3 class="chart-title">연차별 평가액 흐름</h3>
+    <p class="chart-subtitle" id="path-subtitle">-</p>
+    <div class="chart-container sm"><canvas id="path-chart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">환율 시나리오 비교</span></div>
+    <h3 class="chart-title">환율이 이만큼 움직이면?</h3>
+    <p class="chart-subtitle" id="scen-subtitle">-</p>
+    <div class="dl-bar">
+      <button type="button" class="dl-btn" id="dl-csv">CSV 내려받기</button>
+      <button type="button" class="dl-btn" id="dl-xlsx">엑셀(.xlsx) 내려받기</button>
+      <span class="dl-note">엑셀에는 환율 시나리오·연차별 흐름·입력 조건이 함께 들어갑니다 (원 단위 숫자 · 세전)</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>기간 끝 환율</th>
+            <th>환노출 평가액</th>
+            <th>환노출 수익률</th>
+            <th>환헤지(H) 평가액</th>
+            <th>환헤지 수익률</th>
+            <th>유리한 쪽 (차이)</th>
+          </tr>
+        </thead>
+        <tbody id="scen-body"></tbody>
+      </table>
+    </div>
+    <p class="input-hint" style="margin-top:12px;">환율 변화율은 현재 환율 대비입니다. 시나리오는 비교용 가정이며 환율 전망이 아닙니다.</p>
+  </div>
+
+  <div class="card">
+    <h3 class="chart-title">이렇게 계산했습니다</h3>
+    <p class="chart-subtitle">지수 수익률과 헤지 비용이 매년 같다고 보고, 처음에 한 번 넣은 돈을 기간 끝에 원화로 바꿔 비교하는 단순 모형입니다. <b>n</b>은 투자 기간(년)이고, 헤지 비용이 마이너스(프리미엄)면 (1 − 헤지 비용)이 1보다 커집니다.</p>
+    <ul class="formula-list">
+      <li><span class="f-name">환노출 원화 평가액</span><span class="f-eq">투자금 × (1 + 지수 수익률)<sup>n</sup> × (끝 환율 ÷ 현재 환율)</span><span class="f-val" id="f1">-</span></li>
+      <li><span class="f-name">환헤지(H) 원화 평가액</span><span class="f-eq">투자금 × (1 + 지수 수익률)<sup>n</sup> × (1 − 헤지 비용)<sup>n</sup></span><span class="f-val" id="f2">-</span></li>
+      <li><span class="f-name">손익분기 환율</span><span class="f-eq">현재 환율 × (1 − 헤지 비용)<sup>n</sup></span><span class="f-val" id="f3">-</span></li>
+    </ul>
+    <p class="input-hint" style="margin-top:12px;">끝 환율이 손익분기 환율보다 낮으면 (H), 높으면 환노출이 유리합니다. 연차별 흐름 차트는 환율이 현재 환율에서 끝 환율까지 매년 같은 비율로 움직인다고 가정했습니다.</p>
+  </div>
+
+  <div class="card">
+    <div class="link-row">
+      <div>
+        <h3 class="chart-title">이 조건 그대로 공유하기</h3>
+        <p class="chart-subtitle" style="margin-bottom:0;">입력한 값이 담긴 주소를 복사합니다. 카페 글이나 메모에 붙여넣으면 같은 화면이 열립니다.</p>
+      </div>
+      <button class="btn" id="copy-link">링크 복사</button>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <div class="insight-label">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D9542B" stroke-width="2"><path d="M12 3l1.9 5.8L20 10l-4.5 3.3L17 20l-5-3.5L7 20l1.5-6.7L4 10l6.1-1.2L12 3z"/></svg>
+      <span class="insight-label-text">KEY INSIGHT</span>
+    </div>
+    <h3 class="insight-title" id="insight-title">-</h3>
+    <p class="insight-desc" id="insight-desc">-</p>
+    <div class="insight-cta">
+      <div class="insight-cta-text">📊 (H)냐 환노출이냐만큼 중요한 건, 어떤 계좌에 얼마나 오래 담느냐입니다.</div>
+      <a href="https://www.youtube.com/@ttok_jae" target="_blank" rel="noopener" class="cta-link primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        똑재TV 구독하기
+      </a>
+      <a href="https://cafe.naver.com/ttokjae" target="_blank" rel="noopener" class="cta-link secondary">
+        <span class="naver-mark">N</span>
+        평생 ETF 투자 카페 가입
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    ※ 본 계산기는 세금·총보수·수수료를 제외한 세전 기준의 단순 계산 도구입니다. 지수 수익률과 헤지 비용은 매년 일정하다고 가정합니다. 특정 상품의 매수·매도 권유가 아닙니다.<br>
+    실제 환헤지 ETF는 헤지 비율이 100%가 아니고 보통 매달 선물환 계약을 롤오버(갱신)하므로, 실제 결과는 이 계산과 다를 수 있습니다.<br>
+    🔒 입력한 숫자는 이 브라우저 안에서만 계산되며, 서버로 보내거나 따로 저장하지 않습니다.
+  </footer>
+</div>
+
+<script>
+// ============== 표 내려받기 (CSV · 엑셀 .xlsx) — 외부 라이브러리 없이 동작 ==============
+// TJX.csv('파일이름', rows) · TJX.xlsx('파일이름', [{ name: '시트', rows, widths }])
+// rows = [[머리글...], [값...], ...]  숫자는 숫자 그대로 넣으면 엑셀에서 계산 가능한 숫자 칸이 됩니다
+const TJX = (() => {
+  const enc = new TextEncoder();
+  function csvText(rows) {
+    return '﻿' + rows.map(r => r.map(v => {
+      if (v == null) return '';
+      if (typeof v === 'number') return isFinite(v) ? String(Math.round(v * 100) / 100) : '';
+      const t = String(v);
+      return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    }).join(',')).join('\r\n');
+  }
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zipStore(files) {   // 압축 없이 묶기 (엑셀은 이 형식도 그대로 엽니다)
+    const parts = [], central = []; let off = 0;
+    for (const f of files) {
+      const nm = enc.encode(f.name), d = enc.encode(f.text), c = crc32(d);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+      lh.setUint16(12, 0x21, true); lh.setUint32(14, c, true); lh.setUint32(18, d.length, true); lh.setUint32(22, d.length, true);
+      lh.setUint16(26, nm.length, true);
+      parts.push(new Uint8Array(lh.buffer), nm, d);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+      ch.setUint16(14, 0x21, true); ch.setUint32(16, c, true); ch.setUint32(20, d.length, true); ch.setUint32(24, d.length, true);
+      ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+      central.push(new Uint8Array(ch.buffer), nm);
+      off += 30 + nm.length + d.length;
+    }
+    const cs = central.reduce((s, a) => s + a.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cs, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const colName = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  function sheetXml(sh) {
+    const rows = sh.rows || [];
+    const nCol = rows.reduce((m, r) => Math.max(m, r.length), 1);
+    const widths = sh.widths || [];
+    const cols = Array.from({ length: nCol }, (_, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i] || (i === 0 ? 12 : 16)}" customWidth="1"/>`).join('');
+    const body = rows.map((r, ri) => `<row r="${ri + 1}">` + r.map((v, ci) => {
+      const ref = colName(ci) + (ri + 1);
+      if (v == null || v === '') return '';
+      if (typeof v === 'number' && isFinite(v)) {
+        const st = ri === 0 ? 2 : (Math.abs(v - Math.round(v)) < 1e-9 ? 1 : 3);
+        return `<c r="${ref}" s="${st}"><v>${Math.round(v * 10000) / 10000}</v></c>`;
+      }
+      return `<c r="${ref}" t="inlineStr"${ri === 0 ? ' s="2"' : ''}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+    }).join('') + '</row>').join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${cols}</cols><sheetData>${body}</sheetData></worksheet>`;
+  }
+  function xlsxBlob(sheets) {
+    const W = 'http://schemas.openxmlformats.org';
+    const files = [
+      { name: '[Content_Types].xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="${W}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>` },
+      { name: '_rels/.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${W}/package/2006/relationships"><Relationship Id="rId1" Type="${W}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+      { name: 'xl/workbook.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${W}/spreadsheetml/2006/main" xmlns:r="${W}/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${esc(String(s.name || 'Sheet' + (i + 1)).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+      { name: 'xl/_rels/workbook.xml.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${W}/package/2006/relationships">${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="${W}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="${W}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { name: 'xl/styles.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${W}/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
+      ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, text: sheetXml(s) })),
+    ];
+    return zipStore(files);
+  }
+  function save(blob, name) {
+    const a = document.createElement('a'), u = URL.createObjectURL(blob);
+    a.href = u; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 1500);
+  }
+  const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; };
+  return {
+    csvText, xlsxBlob,
+    csv(name, rows) { save(new Blob([csvText(rows)], { type: 'text/csv;charset=utf-8' }), `${name}_${stamp()}.csv`); },
+    xlsx(name, sheets) { save(xlsxBlob(sheets), `${name}_${stamp()}.xlsx`); },
+  };
+})();
+
+// ============== 포맷 ==============
+function formatKRW(n) {
+  const neg = n < 0; n = Math.abs(n);
+  let s;
+  if (n >= 100000000) {
+    const eok = n / 100000000;
+    s = (eok >= 100 ? Math.round(eok).toLocaleString() : eok.toFixed(2)) + '억';
+  } else if (n >= 10000) s = Math.round(n / 10000).toLocaleString() + '만';
+  else s = Math.round(n).toLocaleString();
+  return (neg ? '-' : '') + s;
+}
+function formatKRWFull(n) { return Math.round(n).toLocaleString() + '원'; }
+// 만원 입력값 → "5억원", "3억 2,000만원", "3,000만원"
+function formatManwon(m) {
+  m = Math.round(Number(m) || 0);
+  if (m <= 0) return '0원';
+  const eok = Math.floor(m / 10000), man = m % 10000;
+  if (eok && man) return eok.toLocaleString() + '억 ' + man.toLocaleString() + '만원';
+  if (eok) return eok.toLocaleString() + '억원';
+  return man.toLocaleString() + '만원';
+}
+// 원 → 만원 반올림 표기
+function wonToManText(won) {
+  const neg = won < 0; won = Math.abs(won);
+  let s;
+  const m = won / 10000;
+  if (m >= 10000) s = formatManwon(Math.round(m));
+  else if (m >= 100) s = Math.round(m).toLocaleString() + '만원';
+  else if (m >= 1) s = (Math.round(m * 10) / 10).toLocaleString() + '만원';
+  else s = Math.round(won).toLocaleString() + '원';
+  return (neg ? '-' : '') + s;
+}
+const pct = (v, d = 1) => (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d) + '%';
+// 부호 붙은 % (+3.2% / −4.0%)
+function signPct(v, d = 1) {
+  const r = Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
+  if (r === 0) return (0).toFixed(d) + '%';
+  return (r > 0 ? '+' : '−') + Math.abs(r).toFixed(d) + '%';
+}
+// 환율 표기: 1,345원 (d=1이면 1,344.9원)
+const fxText = (v, d = 0) => (d ? (Math.round(v * 10) / 10).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(v).toLocaleString()) + '원';
+const rateFix = v => { const r2 = Math.round(v * 100) / 100; return Math.abs(r2 * 10 - Math.round(r2 * 10)) < 1e-9 ? r2.toFixed(1) : r2.toFixed(2); };
+const ratePct = v => rateFix(v) + '%';
+
+// ============== 상태 ==============
+const SCEN_PCTS = [-30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30];   // 현재 환율 대비 끝 환율 변화(%)
+let fxChart = null, pathChart = null;
+let lastExport = null;
+
+function readInputs() {
+  const num = (id, d) => { const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : d; };
+  const fxNow = num('fxnow', NaN), fxEnd = num('fxend', NaN);
+  return {
+    amount: Math.max(0, num('amount', 0)) * 10000,                         // 원
+    years: Math.max(1, Math.min(50, Math.round(num('years', 5)))),
+    rate: Math.max(-50, Math.min(50, num('rate', 7))) / 100,               // 달러 기준 연 수익률
+    fxNow: fxNow > 0 ? fxNow : NaN,
+    fxEnd: fxEnd > 0 ? fxEnd : NaN,
+    hedge: Math.max(-10, Math.min(10, num('hedge', 0.8))) / 100,           // 연 헤지 비용 (음수 = 프리미엄)
+  };
+}
+
+// ============== 계산 엔진 ==============
+// 환노출 = 투자금 × (1+r)^n × (끝 환율 / 현재 환율)
+// 환헤지 = 투자금 × (1+r)^n × (1−h)^n
+// 손익분기 환율 = 현재 환율 × (1−h)^n
+const growthOf = (inp, n = inp.years) => Math.pow(1 + inp.rate, n);
+const hedgeKeep = (inp, n = inp.years) => Math.pow(1 - inp.hedge, n);
+const unhedgedAt = (inp, fxEnd, n = inp.years) => inp.amount * growthOf(inp, n) * (fxEnd / inp.fxNow);
+const hedgedAt = (inp, n = inp.years) => inp.amount * growthOf(inp, n) * hedgeKeep(inp, n);
+const breakEven = (inp, n = inp.years) => inp.fxNow * hedgeKeep(inp, n);
+
+function compute(inp) {
+  const un = unhedgedAt(inp, inp.fxEnd);
+  const he = hedgedAt(inp);
+  const be = breakEven(inp);
+  return {
+    un, he, be, diff: he - un,
+    unRet: inp.amount > 0 ? (un / inp.amount - 1) * 100 : 0,
+    heRet: inp.amount > 0 ? (he / inp.amount - 1) * 100 : 0,
+    fxChg: (inp.fxEnd / inp.fxNow - 1) * 100,
+    beChg: (be / inp.fxNow - 1) * 100,
+    cumCost: (1 - hedgeKeep(inp)) * 100,   // 기간 누적 헤지 비용(%)
+  };
+}
+
+// 연차별 경로: 환율은 현재 → 끝 환율로 매년 같은 비율(기하)로 움직인다고 가정
+function buildPath(inp) {
+  const rows = [];
+  const step = Math.pow(inp.fxEnd / inp.fxNow, 1 / inp.years);
+  for (let t = 0; t <= inp.years; t++) {
+    const fx = inp.fxNow * Math.pow(step, t);
+    rows.push({ year: t, fx, un: unhedgedAt(inp, fx, t), he: hedgedAt(inp, t), idx: growthOf(inp, t) });
+  }
+  return rows;
+}
+
+// 시나리오 행: −30%~+30% (5% 간격) + 입력한 예상 환율 + 손익분기
+function buildScenarios(inp, res) {
+  const rows = SCEN_PCTS.map(p => ({ fx: inp.fxNow * (1 + p / 100), p, kind: '' }));
+  const near = fx => rows.find(r => Math.abs(r.fx - fx) < 0.05);
+  const mine = near(inp.fxEnd);
+  if (mine) mine.kind = 'mine';
+  else rows.push({ fx: inp.fxEnd, p: res.fxChg, kind: 'mine' });
+  const beRow = near(res.be);
+  if (beRow) beRow.kind = beRow.kind ? beRow.kind + ' be' : 'be';
+  else rows.push({ fx: res.be, p: res.beChg, kind: 'be' });
+  rows.sort((a, b) => a.fx - b.fx);
+  return rows.map(r => {
+    const un = unhedgedAt(inp, r.fx), he = hedgedAt(inp);
+    return { ...r, un, he, diff: un - he,
+      unRet: inp.amount > 0 ? (un / inp.amount - 1) * 100 : 0,
+      heRet: inp.amount > 0 ? (he / inp.amount - 1) * 100 : 0 };
+  });
+}
+// 같음 판정: 평가액 차이가 1원 미만이거나 손익분기 행
+const winnerOf = r => (Math.abs(r.diff) < 1 || /be/.test(r.kind)) ? 'same' : (r.diff > 0 ? 'un' : 'he');
+
+// ============== 렌더 ==============
+function setStat(i, label, value, sub) {
+  document.getElementById('s' + i + '-label').textContent = label;
+  document.getElementById('s' + i + '-value').textContent = value;
+  document.getElementById('s' + i + '-sub').innerHTML = sub || '';
+}
+
+function render() {
+  const inp = readInputs();
+  const vMain = document.getElementById('verdict-main');
+  const vSub = document.getElementById('verdict-sub');
+
+  if (!(inp.fxNow > 0) || !(inp.fxEnd > 0) || inp.amount <= 0) {
+    vMain.textContent = !(inp.amount > 0) ? '투자금을 입력해 주세요' : '현재 환율과 기간 끝 예상 환율을 입력해 주세요';
+    vSub.textContent = '';
+    [1, 2, 3, 4].forEach(i => setStat(i, '-', '-', ''));
+    lastExport = null;
+    return;
+  }
+
+  const res = compute(inp);
+  const n = inp.years;
+  const beText = fxText(res.be);
+  const endText = fxText(inp.fxEnd);
+
+  // ---- verdict ----
+  vMain.innerHTML = `기간 끝 환율이 <span class="hl">${beText}</span>보다 낮으면 (H)가, <br>높으면 환노출이 유리합니다`;
+  let sub;
+  const absDiff = Math.abs(res.diff);
+  if (absDiff < 1) {
+    sub = `예상 환율 <strong>${endText}</strong>에서는 두 방식의 평가액이 <strong>${wonToManText(res.he)}</strong>으로 거의 같습니다.`;
+  } else if (res.diff > 0) {
+    sub = `예상 환율 <strong>${endText}</strong>(현재 대비 ${signPct(res.fxChg)})이면 <strong>(H)가 ${wonToManText(absDiff)} 더 남습니다</strong>. 환헤지 ${wonToManText(res.he)} vs 환노출 ${wonToManText(res.un)}.`;
+  } else {
+    sub = `예상 환율 <strong>${endText}</strong>(현재 대비 ${signPct(res.fxChg)})이면 <strong>환노출이 ${wonToManText(absDiff)} 더 남습니다</strong>. 환노출 ${wonToManText(res.un)} vs 환헤지 ${wonToManText(res.he)}.`;
+  }
+  if (inp.hedge > 0) sub += ` 헤지 비용 연 ${ratePct(inp.hedge * 100)}가 ${n}년 쌓이면 ${pct(res.cumCost)}라, 환율이 현재(${fxText(inp.fxNow)})보다 <strong>${pct(-res.beChg)} 넘게 떨어져야</strong> (H)가 비용을 만회합니다.`;
+  else if (inp.hedge < 0) sub += ` 헤지 프리미엄(연 ${ratePct(-inp.hedge * 100)}) 덕분에 환율이 현재(${fxText(inp.fxNow)})보다 <strong>${pct(res.beChg)} 오르기 전까지는</strong> (H)가 유리합니다.`;
+  else sub += ` 헤지 비용이 0이라 손익분기 환율은 지금 환율과 같습니다.`;
+  vSub.innerHTML = sub;
+
+  // ---- 카드 4개 ----
+  setStat(1, '환노출 평가액', wonToManText(res.un), `수익률 ${signPct(res.unRet)} · 끝 환율 ${endText} 기준`);
+  setStat(2, '환헤지(H) 평가액', wonToManText(res.he), `수익률 ${signPct(res.heRet)} · 환율과 무관`);
+  if (absDiff < 1) setStat(3, '차이', '거의 같음', `예상 환율이 손익분기와 같습니다`);
+  else setStat(3, res.diff > 0 ? '차이 · (H)가 더 남음' : '차이 · 환노출이 더 남음', wonToManText(absDiff),
+    `원금 ${wonToManText(inp.amount)}의 ${pct(absDiff / inp.amount * 100)}`);
+  setStat(4, '손익분기 환율', fxText(res.be, 1), `현재 대비 ${signPct(res.beChg)} · 이보다 낮으면 (H) 유리`);
+
+  // ---- 공식에 숫자 대입 ----
+  const man = wonToManText(inp.amount);
+  const rTxt = ratePct(inp.rate * 100), hTxt = ratePct(inp.hedge * 100);
+  document.getElementById('f1').textContent = `${man} × (1 + ${rTxt})^${n} × (${endText} ÷ ${fxText(inp.fxNow)}) = ${formatKRWFull(res.un)}`;
+  document.getElementById('f2').textContent = `${man} × (1 + ${rTxt})^${n} × (1 − ${hTxt})^${n} = ${formatKRWFull(res.he)}`;
+  document.getElementById('f3').textContent = `${fxText(inp.fxNow)} × (1 − ${hTxt})^${n} = ${fxText(res.be, 1)}`;
+
+  const path = buildPath(inp);
+  const scen = buildScenarios(inp, res);
+  lastExport = { inp, res, path, scen };
+  drawFx(inp, res);
+  drawPath(inp, path);
+  renderScenarios(inp, res, scen);
+  renderInsight(inp, res);
+  syncUrl(inp);
+}
+
+// ============== 차트 ==============
+const chartCommonOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { font: { family: 'Pretendard', size: 13, weight: 600 }, color: '#1A1A1A', usePointStyle: true, padding: 16 } },
+    tooltip: {
+      backgroundColor: '#FBF7F0', titleColor: '#1A1A1A', bodyColor: '#3A2F26', borderColor: '#D9542B', borderWidth: 1.5,
+      padding: 14, titleFont: { family: 'Pretendard', size: 14, weight: 800 }, bodyFont: { family: 'Pretendard', size: 13, weight: 600 },
+      titleSpacing: 6, bodySpacing: 8, titleMarginBottom: 10, caretSize: 8, cornerRadius: 10, usePointStyle: true, boxPadding: 6,
+    }
+  }
+};
+const C_UN = '#D9542B', C_HE = '#3A2F26', C_BE = '#4A5A4A';
+
+const endLabelPlugin = {
+  id: 'endLabel',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    const labels = [];
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      const last = ds.data.length - 1;
+      const p = meta.data[last];
+      if (!p) return;
+      labels.push({ x: p.x, y: p.y, color: ds._endLabelColor || ds.borderColor, text: ds._short || ds.label, value: ds.data[last] });
+    });
+    labels.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 18) labels[i].y = labels[i - 1].y + 18;
+    const isMobile = window.innerWidth < 768;
+    labels.forEach(l => {
+      const fs = isMobile ? 10 : 11;
+      ctx.font = `700 ${fs}px Pretendard, sans-serif`;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const text = `${l.text} ${formatKRW(l.value)}`;
+      const tw = ctx.measureText(text).width;
+      const padX = isMobile ? 6 : 8, padY = isMobile ? 3 : 4;
+      const bx = l.x + 6, bh = fs + padY * 2, by = l.y - bh / 2, bw = tw + padX * 2, r = 4;
+      ctx.fillStyle = '#FBF7F0'; ctx.strokeStyle = l.color; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') ctx.roundRect(bx, by, bw, bh, r); else ctx.rect(bx, by, bw, bh);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = l.color;
+      ctx.fillText(text, bx + padX, l.y);
+    });
+    ctx.restore();
+  }
+};
+
+// 손익분기·예상 환율 위치에 세로 점선 + 이름표
+const fxMarkPlugin = {
+  id: 'fxMark',
+  afterDatasetsDraw(chart, args, opts) {
+    const { ctx, chartArea: a, scales: { x } } = chart;
+    const isMobile = window.innerWidth < 768;
+    const marks = (opts.marks || []).map(m => ({ ...m, px: x.getPixelForValue(m.x) }));
+    ctx.save();
+    const fs = isMobile ? 10 : 11.5;
+    ctx.font = `800 ${fs}px Pretendard, sans-serif`;
+    ctx.textBaseline = 'middle';
+    let prev = null;
+    marks.sort((p, q) => p.px - q.px).forEach(m => {
+      ctx.strokeStyle = m.color; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(m.px, a.top); ctx.lineTo(m.px, a.bottom); ctx.stroke();
+      ctx.setLineDash([]);
+      const tw = ctx.measureText(m.text).width, padX = isMobile ? 5 : 7, bh = fs + (isMobile ? 6 : 8), bw = tw + padX * 2;
+      let bx = Math.min(Math.max(m.px - bw / 2, a.left), a.right - bw);
+      let by = a.top - bh - 4;
+      if (prev && bx < prev.bx + prev.bw + 4) by = prev.by + bh + 3 > a.top ? a.top + 4 : prev.by + bh + 3;
+      ctx.fillStyle = m.color;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') ctx.roundRect(bx, by, bw, bh, 4); else ctx.rect(bx, by, bw, bh);
+      ctx.fill();
+      ctx.fillStyle = '#FBF7F0'; ctx.textAlign = 'left';
+      ctx.fillText(m.text, bx + padX, by + bh / 2);
+      prev = { bx, by, bw };
+    });
+    ctx.restore();
+  }
+};
+
+function drawFx(inp, res) {
+  const isMobile = window.innerWidth < 768;
+  const S = inp.fxNow;
+  const xmin = Math.min(S * 0.7, inp.fxEnd * 0.97, res.be * 0.97);
+  const xmax = Math.max(S * 1.3, inp.fxEnd * 1.03, res.be * 1.03);
+  const xs = [...new Set([xmin, xmax, inp.fxEnd, res.be, ...SCEN_PCTS.map(p => S * (1 + p / 100))].map(v => Math.round(v * 100) / 100))].sort((a, b) => a - b);
+  const he = hedgedAt(inp);
+  document.getElementById('fx-subtitle').innerHTML =
+    `주황 선(환노출)은 끝 환율이 오를수록 올라가고, 갈색 선(H)은 환율과 상관없이 ${wonToManText(he)}으로 일정합니다. 두 선이 만나는 <b style="color:${C_BE}">${fxText(res.be)}</b>이 손익분기 환율입니다. 가로축은 현재 환율 ${fxText(S)}의 −30%~+30%입니다.`;
+  const ds = [
+    { label: '환노출', data: xs.map(x => ({ x, y: unhedgedAt(inp, x) })), borderColor: C_UN, backgroundColor: C_UN, borderWidth: 3, pointRadius: 0, pointHoverRadius: 5, tension: 0 },
+    { label: '환헤지(H)', data: xs.map(x => ({ x, y: he })), borderColor: C_HE, backgroundColor: C_HE, borderWidth: 3, pointRadius: 0, pointHoverRadius: 5, tension: 0 },
+    { label: '손익분기', data: [{ x: res.be, y: he }], showLine: false, pointRadius: 7, pointHoverRadius: 8, pointBackgroundColor: C_BE, pointBorderColor: '#FBF7F0', pointBorderWidth: 2, borderColor: C_BE, backgroundColor: C_BE },
+    { label: '예상 환율', data: [{ x: inp.fxEnd, y: unhedgedAt(inp, inp.fxEnd) }, { x: inp.fxEnd, y: he }], showLine: false, pointRadius: 6, pointHoverRadius: 7, pointStyle: 'rectRot', pointBackgroundColor: C_UN, pointBorderColor: '#FBF7F0', pointBorderWidth: 2, borderColor: C_UN, backgroundColor: C_UN },
+  ];
+  if (fxChart) fxChart.destroy();
+  fxChart = new Chart(document.getElementById('fx-chart'), {
+    type: 'line',
+    data: { datasets: ds },
+    options: {
+      ...chartCommonOptions,
+      parsing: true,
+      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: isMobile ? 34 : 38, right: 8, left: 4, bottom: 0 } },
+      scales: {
+        x: { type: 'linear', min: xmin, max: xmax, grid: { color: '#EFE7DA' },
+          title: { display: !isMobile, text: '기간 끝 환율 (원/달러)', color: '#8B8276', font: { family: 'Pretendard', size: 12, weight: 700 } },
+          ticks: { font: { family: 'Pretendard', size: 11, weight: 600 }, color: '#8B8276', maxTicksLimit: isMobile ? 5 : 9, callback: v => Math.round(v).toLocaleString() } },
+        y: { grid: { color: '#EFE7DA' }, ticks: { font: { family: 'Pretendard', size: 11, weight: 600 }, color: '#8B8276', callback: v => formatKRW(v) } },
+      },
+      plugins: {
+        ...chartCommonOptions.plugins,
+        legend: { display: true, position: 'bottom', labels: { ...chartCommonOptions.plugins.legend.labels, padding: isMobile ? 10 : 16, font: { family: 'Pretendard', size: isMobile ? 11 : 13, weight: 600 } } },
+        datalabels: { display: false },
+        fxMark: { marks: [
+          { x: res.be, color: C_BE, text: `손익분기 ${fxText(res.be)}` },
+          { x: inp.fxEnd, color: C_UN, text: `예상 ${fxText(inp.fxEnd)}` },
+        ] },
+        tooltip: {
+          ...chartCommonOptions.plugins.tooltip, mode: 'index', intersect: false,
+          filter: it => it.datasetIndex < 2,
+          callbacks: {
+            title: items => items.length ? `끝 환율 ${fxText(items[0].parsed.x)} (현재 대비 ${signPct((items[0].parsed.x / S - 1) * 100)})` : '',
+            label: c => '  ' + c.dataset.label + ': ' + formatKRWFull(c.parsed.y),
+          },
+        },
+      },
+    },
+    plugins: [fxMarkPlugin],
+  });
+}
+
+function drawPath(inp, path) {
+  const isMobile = window.innerWidth < 768;
+  document.getElementById('path-subtitle').textContent =
+    `환율이 ${fxText(inp.fxNow)}에서 ${fxText(inp.fxEnd)}까지 매년 같은 비율로 움직인다고 가정한 흐름입니다. 마지막 해 값이 위 결과와 같습니다.`;
+  const ds = [
+    { label: '환노출', _short: '환노출', data: path.map(p => p.un), borderColor: C_UN, backgroundColor: 'rgba(217,84,43,0.08)', borderWidth: 3, fill: false, tension: 0.2, pointRadius: path.length > 15 ? 0 : 3, pointHoverRadius: 5 },
+    { label: '환헤지(H)', _short: '(H)', data: path.map(p => p.he), borderColor: C_HE, borderWidth: 3, fill: false, tension: 0.2, pointRadius: path.length > 15 ? 0 : 3, pointHoverRadius: 5 },
+  ];
+  if (pathChart) pathChart.destroy();
+  pathChart = new Chart(document.getElementById('path-chart'), {
+    type: 'line',
+    data: { labels: path.map(p => p.year === 0 ? '지금' : p.year + '년'), datasets: ds },
+    options: {
+      ...chartCommonOptions,
+      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { right: isMobile ? 92 : 130, top: 10, bottom: 4, left: 4 } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Pretendard', size: 11, weight: 600 }, color: '#8B8276', maxTicksLimit: isMobile ? 6 : 12 } },
+        y: { grid: { color: '#EFE7DA' }, ticks: { font: { family: 'Pretendard', size: 11, weight: 600 }, color: '#8B8276', callback: v => formatKRW(v) } },
+      },
+      plugins: {
+        ...chartCommonOptions.plugins,
+        legend: { display: false },
+        datalabels: { display: false },
+        tooltip: {
+          ...chartCommonOptions.plugins.tooltip, mode: 'index', intersect: false,
+          callbacks: {
+            label: c => '  ' + c.dataset.label + ': ' + formatKRWFull(c.parsed.y),
+            footer: items => items.length ? `가정 환율 ${fxText(path[items[0].dataIndex].fx)}` : '',
+          },
+          footerFont: { family: 'Pretendard', size: 12, weight: 600 }, footerColor: '#8B8276',
+        },
+      },
+    },
+    plugins: [endLabelPlugin],
+  });
+}
+
+function renderScenarios(inp, res, scen) {
+  document.getElementById('scen-subtitle').textContent =
+    `투자금 ${formatManwon(inp.amount / 10000)}, ${inp.years}년, 지수 연 ${ratePct(inp.rate * 100)}, 헤지 비용 연 ${ratePct(inp.hedge * 100)}일 때 끝 환율별 결과입니다. 주황 줄이 입력한 예상 환율, 초록 줄이 손익분기 환율입니다.`;
+  document.getElementById('scen-body').innerHTML = scen.map(r => {
+    const w = winnerOf(r);
+    const isMine = /mine/.test(r.kind), isBe = /be/.test(r.kind);
+    const cls = isMine ? ' class="highlight-row"' : isBe ? ' class="be-row"' : '';
+    const tags = (isMine ? '<span class="tag-mini">입력값</span>' : '') + (isBe ? '<span class="tag-mini be">손익분기</span>' : '');
+    const win = w === 'same' ? '<td class="c-green">같음</td>'
+      : w === 'he' ? `<td class="c-dark">(H) +${formatKRW(-r.diff)}</td>`
+      : `<td class="c-accent">환노출 +${formatKRW(r.diff)}</td>`;
+    return `<tr${cls}>
+      <td>${fxText(r.fx)} (${signPct(r.p, Number.isInteger(Math.round(r.p * 10) / 10) ? 0 : 1)})${tags}</td>
+      <td class="c-accent">${formatKRW(r.un)}</td>
+      <td>${signPct(r.unRet)}</td>
+      <td class="c-dark">${formatKRW(r.he)}</td>
+      <td>${signPct(r.heRet)}</td>
+      ${win}
+    </tr>`;
+  }).join('');
+}
+
+function renderInsight(inp, res) {
+  const t = document.getElementById('insight-title');
+  const d = document.getElementById('insight-desc');
+  const n = inp.years, h = inp.hedge;
+  const cum = yrs => (1 - Math.pow(1 - h, yrs)) * 100;
+  const beAt = yrs => inp.fxNow * Math.pow(1 - h, yrs);
+  let p1;
+  if (h > 0) {
+    t.textContent = `헤지 비용 연 ${ratePct(h * 100)}, ${n}년이면 ${pct(cum(n))}가 쌓입니다`;
+    p1 = `(H)는 환율이 떨어져도 원화 평가액을 지켜 주지만, 그 대가인 헤지 비용은 <strong>해마다 복리로</strong> 쌓입니다. 연 ${ratePct(h * 100)}면 5년 ${pct(cum(5))}, 10년 ${pct(cum(10))}, 20년 ${pct(cum(20))}입니다. ` +
+      `그래서 오래 둘수록 손익분기 환율이 낮아집니다. 지금 환율 ${fxText(inp.fxNow)} 기준으로 5년이면 ${fxText(beAt(5))}, 10년이면 ${fxText(beAt(10))}, 20년이면 ${fxText(beAt(20))} 아래로 내려가야 (H)가 이깁니다.`;
+  } else if (h < 0) {
+    t.textContent = `지금 조건이면 (H)는 비용 대신 연 ${ratePct(-h * 100)} 프리미엄을 받습니다`;
+    p1 = `한국 금리가 미국보다 높으면 헤지를 하면서 오히려 <strong>프리미엄이 복리로</strong> 쌓입니다. 이 경우 손익분기 환율은 지금보다 높아져 ${n}년 뒤 ${fxText(res.be)}입니다. ` +
+      `다만 금리차는 계속 바뀌기 때문에 이 프리미엄이 기간 내내 유지된다는 보장은 없습니다. 금리차가 다시 뒤집히면 비용으로 바뀝니다.`;
+  } else {
+    t.textContent = '헤지 비용이 0이면 손익분기는 지금 환율입니다';
+    p1 = `헤지 비용이 없다고 가정하면 끝 환율이 지금(${fxText(inp.fxNow)})보다 낮으면 (H), 높으면 환노출이 유리합니다. 실제로는 미국과 한국의 금리차만큼 비용(또는 프리미엄)이 생기고 <strong>해마다 복리로</strong> 쌓이니, 비용 칸에 금리차를 넣어 다시 보세요.`;
+  }
+  const p2 = `환노출에는 <strong>'보험'</strong> 역할도 있습니다. 2008년 금융위기나 2020년 코로나 급락처럼 미국 주가가 크게 빠질 때는 원/달러 환율이 함께 오르는(원화 약세) 경우가 많았습니다. 주가 손실의 일부를 환율이 메워 준 셈입니다. (H)는 환율 하락을 막는 대신 이 완충 장치도 함께 내려놓습니다.`;
+  const p3 = `그래서 이렇게 따져 보시면 됩니다. ① 기간 끝 환율이 손익분기(<strong>${fxText(res.be)}</strong>)보다 낮아질 거라는 근거가 있는가 ② 연금처럼 10년 이상 두는 돈인가 — 길수록 헤지 비용(또는 프리미엄)의 누적 효과가 커집니다 ③ 하락장에서 버틸 완충 장치가 필요한가. ` +
+    `어느 쪽도 확신이 서지 않는다면 한쪽에 몰지 않고 나눠 담아 환율 방향에 대한 베팅을 줄이는 방법도 있습니다.`;
+  d.innerHTML = p1 + '<br><br>' + p2 + '<br><br>' + p3;
+}
+
+// ===== 표 내려받기 (원 단위 숫자) =====
+const R0 = v => Math.round(v);
+const R2 = v => Math.round(v * 100) / 100;
+function exportScenRows(x) {
+  const rows = [['구분', '기간 끝 환율(원)', '현재 대비 환율 변화(%)', '환노출 평가액(원)', '환노출 수익률(%)', '환헤지(H) 평가액(원)', '환헤지 수익률(%)', '차이: 환노출−환헤지(원)', '유리한 쪽']];
+  x.scen.forEach(r => {
+    const kind = [/mine/.test(r.kind) ? '입력한 예상 환율' : '', /be/.test(r.kind) ? '손익분기' : ''].filter(Boolean).join(' · ');
+    const w = winnerOf(r);
+    rows.push([kind, R2(r.fx), R2(r.p), R0(r.un), R2(r.unRet), R0(r.he), R2(r.heRet), w === 'same' ? 0 : R0(r.diff), w === 'same' ? '같음' : w === 'he' ? '환헤지(H)' : '환노출']);
+  });
+  return rows;
+}
+function exportPathRows(x) {
+  const rows = [['연차', '가정 환율(원)', '지수 누적 수익률(%)', '환노출 평가액(원)', '환헤지(H) 평가액(원)', '차이: 환노출−환헤지(원)']];
+  x.path.forEach(p => rows.push([p.year, R2(p.fx), R2((p.idx - 1) * 100), R0(p.un), R0(p.he), R0(p.un - p.he)]));
+  return rows;
+}
+function exportInputRows(x) {
+  const i = x.inp, r = x.res;
+  return [
+    ['항목', '값'],
+    ['투자금(원)', R0(i.amount)],
+    ['투자 기간(년)', i.years],
+    ['기초지수 연 수익률(달러 기준, %)', R2(i.rate * 100)],
+    ['현재 환율(원/달러)', R2(i.fxNow)],
+    ['기간 끝 예상 환율(원/달러)', R2(i.fxEnd)],
+    ['연 환헤지 비용(%, 음수=프리미엄)', R2(i.hedge * 100)],
+    ['손익분기 환율(원/달러)', R2(r.be)],
+    ['환노출 평가액(원)', R0(r.un)],
+    ['환헤지(H) 평가액(원)', R0(r.he)],
+    ['공식', '환노출 = 투자금×(1+r)^n×(끝 환율/현재 환율) · 환헤지 = 투자금×(1+r)^n×(1−h)^n · 손익분기 = 현재 환율×(1−h)^n'],
+  ];
+}
+document.addEventListener('click', e => {
+  const id = e.target && e.target.id;
+  if (!lastExport || (id !== 'dl-csv' && id !== 'dl-xlsx')) return;
+  const name = '환헤지비교_환율시나리오';
+  if (id === 'dl-csv') TJX.csv(name, exportScenRows(lastExport));
+  else TJX.xlsx(name, [
+    { name: '환율 시나리오', rows: exportScenRows(lastExport), widths: [18, 15, 20, 18, 16, 19, 16, 22, 12] },
+    { name: '연차별 흐름', rows: exportPathRows(lastExport), widths: [7, 14, 19, 18, 19, 22] },
+    { name: '입력 조건', rows: exportInputRows(lastExport), widths: [32, 18] },
+  ]);
+});
+
+// ============== 입력칸 숫자 뒤 단위 ==============
+const unitCanvas = document.createElement('canvas').getContext('2d');
+function placeUnits() {
+  document.querySelectorAll('.input-wrap input[data-unit]').forEach(inp => {
+    let tag = inp.parentNode.querySelector('.input-unit');
+    if (!tag) { tag = document.createElement('span'); tag.className = 'input-unit'; tag.textContent = inp.dataset.unit; inp.after(tag); }
+    const cs = getComputedStyle(inp);
+    if (inp.value === '' || !inp.offsetWidth) { tag.style.visibility = 'hidden'; return; }
+    unitCanvas.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const w = unitCanvas.measureText(inp.value).width;
+    const left = parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth) + w + 4 - inp.scrollLeft;
+    tag.style.left = Math.round(left) + 'px';
+    tag.style.fontSize = cs.fontSize;
+    tag.style.visibility = left + tag.offsetWidth < inp.clientWidth - parseFloat(cs.paddingRight) + 8 ? 'visible' : 'hidden';
+  });
+}
+
+// ============== 입력 UI ==============
+function updateDisplays() {
+  const v = id => parseFloat(document.getElementById(id).value);
+  const set = (id, text, empty) => { const el = document.getElementById(id); el.textContent = text; el.classList.toggle('empty', !!empty); };
+  const a = v('amount'), y = v('years'), r = v('rate'), now = v('fxnow'), end = v('fxend'), h = v('hedge');
+  set('amount-display', isFinite(a) && a > 0 ? formatManwon(a) : '입력', !(a > 0));
+  set('years-display', isFinite(y) ? Math.max(1, Math.min(50, Math.round(y))) + '년' : '-', !isFinite(y));
+  set('rate-display', isFinite(r) ? '연 ' + ratePct(r) : '-', !isFinite(r));
+  set('fxnow-display', now > 0 ? fxText(now) : '입력', !(now > 0));
+  const chg = end > 0 && now > 0 ? (end / now - 1) * 100 : NaN;
+  set('fxend-display', isFinite(chg) ? (Math.abs(chg) < 0.05 ? '변화 없음' : pct(Math.abs(chg)) + (chg > 0 ? ' 상승' : ' 하락')) : '입력', !isFinite(chg));
+  set('hedge-display', isFinite(h) ? (h < 0 ? '프리미엄 ' + Math.abs(h).toFixed(2) + '%' : '연 ' + h.toFixed(2) + '%') : '-', !isFinite(h));
+  document.querySelectorAll('.chips[data-target]').forEach(box => {
+    const cur = parseFloat(document.getElementById(box.dataset.target).value);
+    box.querySelectorAll('.chip').forEach(ch => ch.classList.toggle('on', parseFloat(ch.dataset.v) === cur));
+  });
+  // 끝 환율 칩: 현재 환율 대비 % → 실제 환율을 같이 보여 준다
+  document.querySelectorAll('#fxend-chips .chip').forEach(ch => {
+    const p = parseFloat(ch.dataset.p);
+    const target = now > 0 ? Math.round(now * (1 + p / 100)) : NaN;
+    const lab = p === 0 ? '그대로' : (p > 0 ? '+' : '−') + Math.abs(p) + '%';
+    ch.textContent = isFinite(target) ? `${lab} · ${target.toLocaleString()}` : lab;
+    ch.classList.toggle('on', isFinite(target) && Math.abs(end - target) < 0.5);
+  });
+}
+
+function rerender() { updateDisplays(); placeUnits(); render(); }
+
+function bindEvents() {
+  ['amount', 'years', 'rate', 'fxnow', 'fxend', 'hedge'].forEach(id =>
+    document.getElementById(id).addEventListener('input', rerender));
+  document.querySelectorAll('.chips[data-target]').forEach(box => box.addEventListener('click', e => {
+    const ch = e.target.closest('.chip'); if (!ch) return;
+    document.getElementById(box.dataset.target).value = ch.dataset.v;
+    rerender();
+  }));
+  document.getElementById('fxend-chips').addEventListener('click', e => {
+    const ch = e.target.closest('.chip'); if (!ch) return;
+    const now = parseFloat(document.getElementById('fxnow').value);
+    if (!(now > 0)) return;
+    document.getElementById('fxend').value = String(Math.round(now * (1 + parseFloat(ch.dataset.p) / 100)));
+    rerender();
+  });
+  document.getElementById('copy-link').addEventListener('click', copyLink);
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { placeUnits(); render(); }, 200); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeUnits);
+}
+
+// ============== 주소로 값 주고받기 ==============
+// 예: ?amount=1000&years=5&rate=7&now=1400&end=1300&hedge=0.8   (투자금은 만원 단위)
+const URL_KEYS = { amount: ['amount', 0, 1e7], years: ['years', 1, 50], rate: ['rate', -50, 50], now: ['fxnow', 1, 1e5], end: ['fxend', 1, 1e5], hedge: ['hedge', -10, 10] };
+function buildUrl(inp) {
+  const p = new URLSearchParams();
+  p.set('amount', Math.round(inp.amount / 10000));
+  p.set('years', inp.years);
+  p.set('rate', Math.round(inp.rate * 10000) / 100);
+  if (inp.fxNow > 0) p.set('now', Math.round(inp.fxNow * 100) / 100);
+  if (inp.fxEnd > 0) p.set('end', Math.round(inp.fxEnd * 100) / 100);
+  p.set('hedge', Math.round(inp.hedge * 10000) / 100);
+  return location.href.split('?')[0].split('#')[0] + '?' + p.toString();
+}
+function syncUrl(inp) {
+  try { history.replaceState(null, '', buildUrl(inp)); } catch (e) { /* file:// 등에서는 무시 */ }
+}
+function copyLink() {
+  const btn = document.getElementById('copy-link');
+  const url = buildUrl(readInputs());
+  const done = ok => { btn.textContent = ok ? '복사했습니다' : '복사 실패 — 주소창을 복사하세요'; setTimeout(() => btn.textContent = '링크 복사', 1800); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => done(true), () => done(false));
+  else {
+    const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove(); done(ok);
+  }
+}
+function readUrl() {
+  let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
+  if (!q.toString()) return;
+  Object.entries(URL_KEYS).forEach(([k, [id, lo, hi]]) => {
+    if (!q.has(k)) return;
+    const v = parseFloat(q.get(k));
+    if (!isFinite(v) || v < lo || v > hi) return;
+    document.getElementById(id).value = String(Math.round(v * 100) / 100);
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  readUrl();
+  bindEvents();
+  rerender();
+});
+</script>
+</body>
+</html>
