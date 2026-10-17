@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script src="https://ttokjaetv.github.io/member-lock.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>환헤지 비교 계산기 · 똑재TV</title>
 <meta name="description" content="미국 자산 ETF를 환헤지(H)로 살지 환노출로 살지, 기간 끝 환율이 얼마 아래로 내려가야 (H)가 유리한지 손익분기 환율 하나로 보여 드립니다.">
@@ -436,19 +437,19 @@
     <div class="chart-container"><canvas id="fx-chart"></canvas></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-member="연차별 흐름 차트">
     <h3 class="chart-title">연차별 평가액 흐름</h3>
     <p class="chart-subtitle" id="path-subtitle">-</p>
     <div class="chart-container sm"><canvas id="path-chart"></canvas></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-member="환율 시나리오 표">
     <div class="step-label"><div class="step-line"></div><span class="step-text">환율 시나리오 비교</span></div>
     <h3 class="chart-title">환율이 이만큼 움직이면?</h3>
     <p class="chart-subtitle" id="scen-subtitle">-</p>
     <div class="dl-bar">
-      <button type="button" class="dl-btn" id="dl-csv">CSV 내려받기</button>
-      <button type="button" class="dl-btn" id="dl-xlsx">엑셀(.xlsx) 내려받기</button>
+      <button type="button" class="dl-btn" id="dl-csv" data-member-click="엑셀 내려받기">CSV 내려받기</button>
+      <button type="button" class="dl-btn" id="dl-xlsx" data-member-click="엑셀 내려받기">엑셀(.xlsx) 내려받기</button>
       <span class="dl-note">엑셀에는 환율 시나리오·연차별 흐름·입력 조건이 함께 들어갑니다 (원 단위 숫자 · 세전)</span>
     </div>
     <div class="table-wrap">
