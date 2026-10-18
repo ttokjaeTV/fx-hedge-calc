@@ -625,7 +625,7 @@ function wonToManText(won) {
   const neg = won < 0; won = Math.abs(won);
   let s;
   const m = won / 10000;
-  if (m >= 10000) s = formatManwon(Math.round(m));
+  if (Math.round(m) >= 10000) s = formatManwon(Math.round(m));   // 반올림 후 1억 이상이면 억 단위로(9,999.5만 → 1억원)
   else if (m >= 100) s = Math.round(m).toLocaleString() + '만원';
   else if (m >= 1) s = (Math.round(m * 10) / 10).toLocaleString() + '만원';
   else s = Math.round(won).toLocaleString() + '원';
