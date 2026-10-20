@@ -631,17 +631,21 @@ function wonToManText(won) {
   else s = Math.round(won).toLocaleString() + '원';
   return (neg ? '-' : '') + s;
 }
-const pct = (v, d = 1) => (Math.round(v * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d) + '%';
+// 소수 자릿수는 toFixed 그대로 두고 정수 부분에만 천 단위 쉼표 (88446.3 → 88,446.3)
+const commaFixed = (v, d) => { const [i, f] = v.toFixed(d).split('.'); return i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (f ? '.' + f : ''); };
+const pct = (v, d = 1) => commaFixed(Math.round(v * Math.pow(10, d)) / Math.pow(10, d), d) + '%';
 // 부호 붙은 % (+3.2% / −4.0%)
 function signPct(v, d = 1) {
   const r = Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
   if (r === 0) return (0).toFixed(d) + '%';
-  return (r > 0 ? '+' : '−') + Math.abs(r).toFixed(d) + '%';
+  return (r > 0 ? '+' : '−') + commaFixed(Math.abs(r), d) + '%';
 }
 // 환율 표기: 1,345원 (d=1이면 1,344.9원)
 const fxText = (v, d = 0) => (d ? (Math.round(v * 10) / 10).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(v).toLocaleString()) + '원';
 const rateFix = v => { const r2 = Math.round(v * 100) / 100; return Math.abs(r2 * 10 - Math.round(r2 * 10)) < 1e-9 ? r2.toFixed(1) : r2.toFixed(2); };
 const ratePct = v => rateFix(v) + '%';
+// 공식 대입용 '+ 5.0%' / '− 5.0%': 음수를 넣어도 '(1 + -5.0%)'처럼 부호가 겹치지 않게 연산 기호를 바꾼다
+const opPct = (op, v, fmt = ratePct) => ((op === '+') === !(v < 0) ? '+ ' : '− ') + fmt(Math.abs(v));
 
 // ============== 상태 ==============
 const SCEN_PCTS = [-30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30];   // 현재 환율 대비 끝 환율 변화(%)
@@ -768,10 +772,10 @@ function render() {
 
   // ---- 공식에 숫자 대입 ----
   const man = wonToManText(inp.amount);
-  const rTxt = ratePct(inp.rate * 100), hTxt = ratePct(inp.hedge * 100);
-  document.getElementById('f1').textContent = `${man} × (1 + ${rTxt})^${n} × (${endText} ÷ ${fxText(inp.fxNow)}) = ${formatKRWFull(res.un)}`;
-  document.getElementById('f2').textContent = `${man} × (1 + ${rTxt})^${n} × (1 − ${hTxt})^${n} = ${formatKRWFull(res.he)}`;
-  document.getElementById('f3').textContent = `${fxText(inp.fxNow)} × (1 − ${hTxt})^${n} = ${fxText(res.be, 1)}`;
+  const rTxt = opPct('+', inp.rate * 100), hTxt = opPct('−', inp.hedge * 100);   // '+ 5.0%' / '− 0.8%' (음수면 기호를 바꿈)
+  document.getElementById('f1').textContent = `${man} × (1 ${rTxt})^${n} × (${endText} ÷ ${fxText(inp.fxNow)}) = ${formatKRWFull(res.un)}`;
+  document.getElementById('f2').textContent = `${man} × (1 ${rTxt})^${n} × (1 ${hTxt})^${n} = ${formatKRWFull(res.he)}`;
+  document.getElementById('f3').textContent = `${fxText(inp.fxNow)} × (1 ${hTxt})^${n} = ${fxText(res.be, 1)}`;
 
   const path = buildPath(inp);
   const scen = buildScenarios(inp, res);
